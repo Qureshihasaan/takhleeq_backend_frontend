@@ -1,12 +1,20 @@
-import { usersApi } from './apiClient';
+import { usersApi } from "./apiClient";
 
 export const authService = {
   /**
-   * Login user with email and password
+   * Login user with username and password
    */
-  login: async (email, password) => {
+  login: async (username, password) => {
     try {
-      const response = await usersApi.post('/login', { email, password });
+      const formData = new FormData();
+      formData.append("username", username);
+      formData.append("password", password);
+
+      const response = await usersApi.post("/login", formData, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
+      });
       return response.data;
     } catch (error) {
       console.error("Login failed:", error);
@@ -19,7 +27,7 @@ export const authService = {
    */
   register: async (userData) => {
     try {
-      const response = await usersApi.post('/register', userData);
+      const response = await usersApi.post("/Signup", userData);
       return response.data;
     } catch (error) {
       console.error("Registration failed:", error);
@@ -28,14 +36,16 @@ export const authService = {
   },
 
   /**
-   * Logout user
+   * Google OAuth authentication
    */
-  logout: async () => {
+  googleAuth: async (idToken) => {
     try {
-      const response = await usersApi.post('/logout');
+      const response = await usersApi.post("/auth/google", {
+        id_token: idToken,
+      });
       return response.data;
     } catch (error) {
-      console.error("Logout failed:", error);
+      console.error("Google auth failed:", error);
       throw error;
     }
   },
@@ -45,7 +55,7 @@ export const authService = {
    */
   getCurrentUser: async () => {
     try {
-      const response = await usersApi.get('/profile');
+      const response = await usersApi.get("/user/me");
       return response.data;
     } catch (error) {
       console.error("Failed to get current user:", error);
@@ -54,30 +64,99 @@ export const authService = {
   },
 
   /**
+   * Get user by ID
+   */
+  getUserById: async (userId) => {
+    try {
+      const response = await usersApi.get(`/user/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to get user:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get all users
+   */
+  getAllUsers: async () => {
+    try {
+      const response = await usersApi.get("/user/all");
+      return response.data;
+    } catch (error) {
+      console.error("Failed to get all users:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Delete user by ID
+   */
+  deleteUser: async (userId) => {
+    try {
+      const response = await usersApi.delete(`/user/delete/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error("Failed to delete user:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Get access token for testing
+   */
+  getAccessToken: async (email, role = "buyer", userId = null) => {
+    try {
+      const response = await usersApi.get("/get_access_token", {
+        params: { email, role, user_id: userId },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to get access token:", error);
+      throw error;
+    }
+  },
+
+  /**
+   * Decode access token
+   */
+  decodeToken: async (accessToken) => {
+    try {
+      const response = await usersApi.get("/decode_token", {
+        params: { access_token: accessToken },
+      });
+      return response.data;
+    } catch (error) {
+      console.error("Failed to decode token:", error);
+      throw error;
+    }
+  },
+
+  /**
    * Store authentication token in localStorage
    */
   setAuthToken: (token) => {
-    localStorage.setItem('authToken', token);
+    localStorage.setItem("authToken", token);
   },
 
   /**
    * Get authentication token from localStorage
    */
   getAuthToken: () => {
-    return localStorage.getItem('authToken');
+    return localStorage.getItem("authToken");
   },
 
   /**
    * Remove authentication token from localStorage
    */
   removeAuthToken: () => {
-    localStorage.removeItem('authToken');
+    localStorage.removeItem("authToken");
   },
 
   /**
    * Check if user is authenticated
    */
   isAuthenticated: () => {
-    return !!localStorage.getItem('authToken');
-  }
+    return !!localStorage.getItem("authToken");
+  },
 };
