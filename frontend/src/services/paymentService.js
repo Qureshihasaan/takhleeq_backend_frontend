@@ -19,7 +19,7 @@ export const paymentService = {
    */
   getAllPayments: async () => {
     try {
-      const response = await paymentApi.get('/get_all_payment');
+      const response = await paymentApi.get('/get_payment');
       return response.data;
     } catch (error) {
       console.error("Failed to get payments:", error);

@@ -1,5 +1,6 @@
 import { useSelector, useDispatch } from 'react-redux';
-import { addToCart, removeFromCart, updateQuantity } from '../store/cartSlice';
+import { addToCart as addToCartAction, removeFromCart, updateQuantity as updateQuantityAction, clearCart as clearCartAction } from '../store/cartSlice';
+import { inventoryService } from '../services/inventoryService';
 
 export const useCart = () => {
   const items = useSelector(state => state.cart.items);
@@ -14,18 +15,35 @@ export const useCart = () => {
     totalItems,
     totalPrice,
     isOpen,
-    addToCart: (product, quantity = 1) => {
-      dispatch(addToCart({ ...product, quantity }));
+    addToCart: async (product, quantity = 1) => {
+      try {
+        await inventoryService.checkInventory(product.id, quantity);
+        dispatch(addToCartAction({ ...product, quantity }));
+        return true;
+      } catch (error) {
+        alert("Not enough inventory available to add this item.");
+        return false;
+      }
     },
     removeFromCart: (productId) => {
       dispatch(removeFromCart(productId));
     },
-    updateQuantity: (productId, quantity) => {
+    updateQuantity: async (productId, quantity) => {
       if (quantity <= 0) {
         dispatch(removeFromCart(productId));
       } else {
-        dispatch(updateQuantity({ id: productId, quantity }));
+        try {
+          await inventoryService.checkInventory(productId, quantity);
+          dispatch(updateQuantityAction({ id: productId, quantity }));
+          return true;
+        } catch (error) {
+          alert("Not enough inventory available for this quantity.");
+          return false;
+        }
       }
     },
+    clearCart: () => {
+      dispatch(clearCartAction());
+    }
   };
 };

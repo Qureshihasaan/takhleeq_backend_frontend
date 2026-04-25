@@ -1,7 +1,8 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../../hooks/useCart";
 import ProductCard from "../ui/ProductCard";
+import { productService } from "../../services/productService";
 
 // Mock categories data
 const categories = [
@@ -108,9 +109,32 @@ const featuredProducts = [
 
 const CategoriesPage = () => {
   const { addToCart } = useCart();
+  const [products, setProducts] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchProducts = async () => {
+      try {
+        const data = await productService.getAllProducts();
+        setProducts(data);
+      } catch (error) {
+        console.error("Error fetching products:", error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    fetchProducts();
+  }, []);
 
   const handleAddToCart = (product) => {
-    addToCart(product);
+    // Map backend model to cart item structure
+    addToCart({
+      id: product.Product_id,
+      name: product.Product_name,
+      price: product.price,
+      image: `${import.meta.env.VITE_PRODUCTS_API_URL || 'http://localhost:8000'}/product/${product.Product_id}/image`,
+      quantity: 1
+    });
   };
 
   return (
@@ -176,17 +200,27 @@ const CategoriesPage = () => {
           </h2>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {featuredProducts.map((product) => (
-              <ProductCard
-                key={product.id}
-                image={product.image}
-                title={product.name}
-                tags={product.tags}
-                description={product.description}
-                price={product.price}
-                onAddToCart={() => handleAddToCart(product)}
-              />
-            ))}
+            {loading ? (
+              <div className="col-span-full py-12 flex justify-center items-center">
+                <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-primaryColor"></div>
+              </div>
+            ) : products.length > 0 ? (
+              products.map((product) => (
+                <ProductCard
+                  key={product.Product_id}
+                  image={`${import.meta.env.VITE_PRODUCTS_API_URL || 'http://localhost:8000'}/product/${product.Product_id}/image`}
+                  title={product.Product_name}
+                  tags={["Featured"]}
+                  description={product.Product_details}
+                  price={product.price}
+                  onAddToCart={() => handleAddToCart(product)}
+                />
+              ))
+            ) : (
+              <div className="col-span-full text-center py-12 text-textColorMuted">
+                No products found
+              </div>
+            )}
           </div>
         </div>
 

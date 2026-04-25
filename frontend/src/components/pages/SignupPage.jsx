@@ -5,7 +5,7 @@ import { authService } from '../../services/authService';
 
 const SignupPage = () => {
   const [formData, setFormData] = useState({
-    name: '',
+    username: '',
     email: '',
     password: '',
     confirmPassword: ''
@@ -46,8 +46,12 @@ const SignupPage = () => {
     }
 
     try {
-      const { confirmPassword, ...userData } = formData;
-      const response = await authService.register(userData);
+      const response = await authService.register({
+        username: formData.username,
+        email: formData.email,
+        plain_password: formData.password,
+        role: "buyer"
+      });
       
       if (response.token) {
         authService.setAuthToken(response.token);
@@ -86,22 +90,22 @@ const SignupPage = () => {
 
           <div>
             <label htmlFor="name" className="block text-textColorMain text-fontSizeSm font-fontWeightMedium mb-marginSmall">
-              Full Name
+              User Name
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                 <User size={20} className="text-textColorMuted" />
               </div>
               <input
-                id="name"
-                name="name"
+                id="username"
+                name="username"
                 type="text"
-                autoComplete="name"
+                autoComplete="username"
                 required
-                value={formData.name}
+                value={formData.username}
                 onChange={handleChange}
                 className="appearance-none relative block w-full pl-10 pr-3 py-paddingMedium border border-borderColor bg-surfaceColor text-textColorMain rounded-borderRadiusMd focus:outline-none focus:ring-2 focus:ring-primaryColor focus:border-transparent"
-                placeholder="Enter your full name"
+                placeholder="Enter your username"
               />
             </div>
           </div>

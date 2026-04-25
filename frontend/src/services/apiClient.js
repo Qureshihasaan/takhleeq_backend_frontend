@@ -88,8 +88,8 @@ const setupInterceptors = (axiosInstance) => {
       // Handle 401 Unauthorized - token expired or invalid
       if (error.response?.status === 401) {
         localStorage.removeItem("authToken");
-        // Redirect to login page or handle token refresh
-        window.location.href = "/login";
+        // Dispatch a custom event to let React/Redux handle the redirect
+        window.dispatchEvent(new Event("auth:unauthorized"));
       }
 
       return Promise.reject(error);

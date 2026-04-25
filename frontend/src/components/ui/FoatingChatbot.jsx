@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { MessageCircle, X, Send, Minus } from 'lucide-react';
+import { aiChatbotService } from '../../services/aiChatbotService';
 
 const FloatingChatbot = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -7,32 +8,44 @@ const FloatingChatbot = () => {
   const [messages, setMessages] = useState([
     { id: 1, text: "Hello! How can I help you today?", sender: 'bot' }
   ]);
+  const [isTyping, setIsTyping] = useState(false);
   
   const scrollRef = useRef(null);
+  const sessionIdRef = useRef(Date.now().toString());
 
   // Auto-scroll to bottom on new messages
   useEffect(() => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages, isOpen]);
+  }, [messages, isOpen, isTyping]);
 
-  const handleSend = (e) => {
+  const handleSend = async (e) => {
     e.preventDefault();
     if (!input.trim()) return;
 
-    const userMsg = { id: Date.now(), text: input, sender: 'user' };
+    const currentInput = input;
+    const userMsg = { id: Date.now(), text: currentInput, sender: 'user' };
     setMessages(prev => [...prev, userMsg]);
     setInput('');
+    setIsTyping(true);
 
-    // Mock bot response
-    setTimeout(() => {
+    try {
+      const response = await aiChatbotService.sendMessage(currentInput, sessionIdRef.current);
       setMessages(prev => [...prev, { 
         id: Date.now() + 1, 
-        text: "Thanks for reaching out! Our team will get back to you shortly.", 
+        text: response.reply || response.message || "I didn't quite understand that.", // assuming backend returns reply/message
         sender: 'bot' 
       }]);
-    }, 1000);
+    } catch (error) {
+      setMessages(prev => [...prev, { 
+        id: Date.now() + 1, 
+        text: "Sorry, I am having trouble connecting to the server.", 
+        sender: 'bot' 
+      }]);
+    } finally {
+      setIsTyping(false);
+    }
   };
 
   return (

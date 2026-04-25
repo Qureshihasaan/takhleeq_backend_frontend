@@ -4,17 +4,16 @@ export const authService = {
   /**
    * Login user with username and password
    */
-  login: async (username, password) => {
+  login: async (userData) => {
     try {
-      const formData = new FormData();
-      formData.append("username", username);
-      formData.append("password", password);
+      const payload = {
+        username: userData.username || "",
+        email: userData.email || "",
+        plain_password: userData.plain_password || "",
+        role: userData.role || "buyer"
+      };
 
-      const response = await usersApi.post("/login", formData, {
-        headers: {
-          "Content-Type": "application/x-www-form-urlencoded",
-        },
-      });
+      const response = await usersApi.post("/login", payload);
       return response.data;
     } catch (error) {
       console.error("Login failed:", error);
@@ -27,7 +26,14 @@ export const authService = {
    */
   register: async (userData) => {
     try {
-      const response = await usersApi.post("/Signup", userData);
+      const payload = {
+        username: userData.username || "",
+        email: userData.email || "",
+        plain_password: userData.plain_password || "",
+        role: userData.role || "buyer"
+      };
+      
+      const response = await usersApi.post("/signup", payload);
       return response.data;
     } catch (error) {
       console.error("Registration failed:", error);

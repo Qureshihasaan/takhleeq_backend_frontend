@@ -11,7 +11,6 @@ import {
   Sliders,
   Eye,
   Droplet,
-  Tag,
   Send,
   Hand,
   Search,
@@ -21,6 +20,7 @@ import {
   Settings,
 } from "lucide-react";
 import StyleSettingsSidebar from "../ui/StyleSettingsSidebar";
+import { aiDesignService } from "../../services/aiDesignService";
 
 // --- Reusable Dropdown Component ---
 const Dropdown = ({ label, options, selected, onSelect, isOpen, onToggle }) => {
@@ -93,6 +93,7 @@ const StudioPage = () => {
   const [activeTab, setActiveTab] = useState("new");
   const [selectedPreset, setSelectedPreset] = useState("");
   const [activeDropdown, setActiveDropdown] = useState(null);
+  const [isGenerating, setIsGenerating] = useState(false);
 
   const visualStyles = ["Abstract", "3D Render", "Minimalist", "Impressionist"];
   const colorPalettes = ["Golden", "Ocean", "Sunset", "Forest", "Cosmic"];
@@ -110,6 +111,27 @@ const StudioPage = () => {
     { id: "presets", name: "Saved Presets", icon: <Bookmark size={20} /> },
     // { id: "recent", name: "Recent Generations", icon: <Clock size={20} /> },
   ];
+
+  const handleGenerate = async () => {
+    if (!prompt.trim()) return;
+    setIsGenerating(true);
+    try {
+      const requestPayload = {
+        user_idea: prompt,
+        product_id: 0,
+        product_image: "",
+        product_type: selectedStyle || "t-shirt",
+        product_color: selectedPalette || "white"
+      };
+      await aiDesignService.createAICenterDesign(requestPayload);
+      alert("Design submitted successfully. You can view its progress in My Designs Lab.");
+    } catch (error) {
+      console.error("Failed to generate design", error);
+      alert("Failed to submit design request.");
+    } finally {
+      setIsGenerating(false);
+    }
+  };
 
   const handleSubjectToggle = (subject) => {
     setSelectedSubjects((prev) =>
@@ -245,8 +267,12 @@ const StudioPage = () => {
                 placeholder="Add iridescent petals and bioluminescent glow..."
                 className="flex-1 bg-transparent border-none outline-none px-4 text-textColor placeholder-textColorMuted text-sm"
               />
-              <button className="bg-primaryColor text-white px-5 py-2.5 rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-semibold text-sm shadow-md shadow-primaryColor/20">
-                Refine
+              <button 
+                onClick={handleGenerate}
+                disabled={isGenerating}
+                className={`bg-primaryColor text-white px-5 py-2.5 rounded-xl hover:opacity-90 transition-all flex items-center gap-2 font-semibold text-sm shadow-md shadow-primaryColor/20 ${isGenerating ? 'opacity-50 cursor-not-allowed' : ''}`}
+              >
+                {isGenerating ? "Generating..." : "Refine"}
                 <Settings size={16} />
               </button>
             </div>

@@ -4,27 +4,18 @@ export const productService = {
   /**
    * Create a new product
    */
-  createProduct: async (productData, file = null) => {
+  createProduct: async (productData) => {
     try {
-      const formData = new FormData();
+      const payload = {
+        product_id: productData.product_id || 0,
+        Product_name: productData.Product_name || "",
+        Product_details: productData.Product_details || "",
+        product_quantity: productData.product_quantity || 0,
+        price: productData.price || 1,
+        product_image: productData.product_image || "string"
+      };
 
-      // Add form fields
-      formData.append("Product_id", productData.Product_id);
-      formData.append("Product_name", productData.Product_name);
-      formData.append("Product_details", productData.Product_details);
-      formData.append("product_quantity", productData.product_quantity);
-      formData.append("price", productData.price);
-
-      // Add file if provided
-      if (file) {
-        formData.append("file", file);
-      }
-
-      const response = await productsApi.post("/product", formData, {
-        headers: {
-          "Content-Type": "multipart/form-data",
-        },
-      });
+      const response = await productsApi.post("/product", payload);
       return response.data;
     } catch (error) {
       console.error("Failed to create product:", error);
