@@ -1,8 +1,8 @@
-# .venv
-# venv
-# __pycache__
-# .git
-# .vscode
-# .env
-# *.pyc
-# *.pyo
+.venv
+venv
+__pycache__
+.git
+.vscode
+.env
+*.pyc
+*.pyo
