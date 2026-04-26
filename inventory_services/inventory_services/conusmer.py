@@ -17,10 +17,9 @@ logging.basicConfig(level=logging.INFO)
 async def consume_product_events():
     consumer = AIOKafkaConsumer(
         setting.KAFKA_PRODUCT_TOPIC,
-        bootstrap_servers=setting.BOOTSTRAP_SERVER,
+        bootstrap_servers=str(setting.KAFKA_BOOTSTRAP_SERVER),
         group_id=setting.KAFKA_CONSUMER_GROUP_ID_FOR_INVENTORY,
         auto_offset_reset="earliest",
-        value_deserializer=lambda x: json.loads(x.decode("utf-8")),
     )
 
     await consumer.start()
@@ -30,7 +29,7 @@ async def consume_product_events():
     try:
         async for msg in consumer:
             try:
-                event = json.loads(msg.value.decode("utf-8"))
+                event = json.loads(msg.value)
                 print(type(event))
                 print("Event received:", event)
                 if event["event_type"] == "Product_Created":

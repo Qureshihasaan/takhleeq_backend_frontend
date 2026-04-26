@@ -47,11 +47,15 @@ async def create_user(
     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
 ) -> dict:
     if not user.username or not user.plain_password:
-        raise HTTPException(status_code=400, detail="Please Enter Username or Password....")
+        raise HTTPException(
+            status_code=400, detail="Please Enter Username or Password...."
+        )
 
     # Validate role
     if user.role not in ("buyer", "seller", "admin"):
-        raise HTTPException(status_code=400, detail="Role must be 'buyer', 'seller', or 'admin'")
+        raise HTTPException(
+            status_code=400, detail="Role must be 'buyer', 'seller', or 'admin'"
+        )
 
     new_user = User(
         username=user.username,
@@ -75,8 +79,10 @@ async def create_user(
             "role": user.role,
         },
     }
-    await producer.send_and_wait(setting.KAFKA_USER_TOPIC, json.dumps(event).encode("utf-8"))
-    print("User_data sent to kafka topic...")
+    await producer.send_and_wait(
+        setting.KAFKA_USER_TOPIC, json.dumps(event).encode("utf-8")
+    )
+    print("User_data sent to kafka topic")
     return {"message": "User Account Created Successfully"}
 
 
@@ -87,7 +93,9 @@ async def login_with_token(
 ) -> Token:
     user = authenticate_user(form_data.username, form_data.password, db)
     if not user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Could Not Validate User")
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED, detail="Could Not Validate User"
+        )
     access_token = create_access_token(
         user.username,
         user.id,
@@ -168,7 +176,9 @@ async def google_auth(
                 "auth_provider": "google",
             },
         }
-        await producer.send_and_wait(setting.KAFKA_USER_TOPIC, json.dumps(event).encode("utf-8"))
+        await producer.send_and_wait(
+            setting.KAFKA_USER_TOPIC, json.dumps(event).encode("utf-8")
+        )
         print("Google user created and sent to kafka topic...")
 
     # Generate JWT
@@ -184,7 +194,9 @@ async def google_auth(
 @app.get("/get_access_token")
 def get_access_token(email: str, role: str = "buyer", user_id: Optional[int] = None):
     access_token_expire = timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES)
-    access_token = create_access_token(email, user_id, role, expires_delta=access_token_expire)
+    access_token = create_access_token(
+        email, user_id, role, expires_delta=access_token_expire
+    )
     return {"access_token": access_token}
 
 
@@ -204,7 +216,10 @@ def get_all_user(db: Annotated[Session, Depends(get_session)]):
 
 
 @app.get("/user/me")
-def read_user(token: Annotated[str, Depends(oauth2_scheme)], db: Annotated[Session, Depends(get_session)]):
+def read_user(
+    token: Annotated[str, Depends(oauth2_scheme)],
+    db: Annotated[Session, Depends(get_session)],
+):
     user_token_data = decode_access_token(token)
     user = db.exec(select(User).where(User.email == user_token_data["sub"])).first()
     if not user:

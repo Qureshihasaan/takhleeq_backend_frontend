@@ -22,7 +22,7 @@ async def kafka_producer1():
     #     if ssl_cafile:
     #         config["ssl_cafile"] = ssl_cafile
 
-    producer = AIOKafkaProducer(bootstrap_server=str(setting.KAFKA_BOOTSTRAP_SERVER))
+    producer = AIOKafkaProducer(bootstrap_servers=str(setting.KAFKA_BOOTSTRAP_SERVER))
     await producer.start()
     try:
         yield producer
