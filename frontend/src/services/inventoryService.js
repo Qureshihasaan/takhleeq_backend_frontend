@@ -32,7 +32,7 @@ export const inventoryService = {
    */
   deleteStock: async (productId) => {
     try {
-      const response = await inventoryApi.delete(`/delete_stock/${productId}`);
+      const response = await inventoryApi.delete(`/delete_srock/${productId}`);
       return response.data;
     } catch (error) {
       console.error("Failed to delete stock:", error);

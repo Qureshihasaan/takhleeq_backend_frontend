@@ -46,8 +46,12 @@ const SignupPage = () => {
     }
 
     try {
-      const { confirmPassword, ...userData } = formData;
-      const response = await authService.register(userData);
+      const response = await authService.register({
+        username: formData.username,
+        email: formData.email,
+        plain_password: formData.password,
+        role: "buyer"
+      });
       
       if (response.token) {
         authService.setAuthToken(response.token);
@@ -85,8 +89,13 @@ const SignupPage = () => {
           )}
 
           <div>
+<<<<<<< HEAD
             <label htmlFor="username" className="block text-textColorMain text-fontSizeSm font-fontWeightMedium mb-marginSmall">
               Username
+=======
+            <label htmlFor="name" className="block text-textColorMain text-fontSizeSm font-fontWeightMedium mb-marginSmall">
+              User Name
+>>>>>>> 364540b87ab80a684766315e0590d39f541376ab
             </label>
             <div className="relative">
               <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
@@ -101,7 +110,11 @@ const SignupPage = () => {
                 value={formData.username}
                 onChange={handleChange}
                 className="appearance-none relative block w-full pl-10 pr-3 py-paddingMedium border border-borderColor bg-surfaceColor text-textColorMain rounded-borderRadiusMd focus:outline-none focus:ring-2 focus:ring-primaryColor focus:border-transparent"
+<<<<<<< HEAD
                 placeholder="Enter your user name"
+=======
+                placeholder="Enter your username"
+>>>>>>> 364540b87ab80a684766315e0590d39f541376ab
               />
             </div>
           </div>

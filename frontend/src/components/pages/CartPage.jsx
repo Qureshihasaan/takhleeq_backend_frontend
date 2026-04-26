@@ -1,9 +1,12 @@
 import React from "react";
 import { Link } from "react-router-dom";
 import { useCart } from "../../hooks/useCart";
+import { useSelector } from "react-redux";
 import CartItem from "../ui/CartItem";
 import OrderSummary from "../ui/OrderSummary";
 import ProductCard from "../ui/ProductCard";
+import { orderService } from "../../services/orderService";
+import { paymentService } from "../../services/paymentService";
 
 // Mock data for recommended products
 const recommendedProducts = [
@@ -42,7 +45,10 @@ const recommendedProducts = [
 ];
 
 const CartPage = () => {
-  const { items, totalPrice, updateQuantity, removeFromCart } = useCart();
+  const { items, totalPrice, updateQuantity, removeFromCart, clearCart } = useCart();
+  const { user } = useSelector(state => state.auth);
+  const [isProcessing, setIsProcessing] = React.useState(false);
+  const [paymentStatus, setPaymentStatus] = React.useState(null);
 
   // Calculate order totals
   const subtotal = totalPrice;
@@ -50,9 +56,74 @@ const CartPage = () => {
   const tax = subtotal * 0.08; // 8% tax
   const total = subtotal + shipping + tax;
 
-  const handleCheckout = () => {
-    // Handle checkout logic here
-    console.log("Proceeding to checkout...");
+  const handleCheckout = async () => {
+    if (!user) {
+      alert("Please login to checkout");
+      return;
+    }
+    
+    setIsProcessing(true);
+    setPaymentStatus("Creating Order...");
+    try {
+      // 1. Create orders and payments per item
+      setPaymentStatus("Creating Orders...");
+      
+      const paymentPromises = items.map(async (item) => {
+        const orderPayload = {
+          order_id: 0,
+          user_id: user.user_id || 0, // Fallback if user_id is not named this way
+          user_email: user.email || "user@example.com",
+          product_id: item.id || item.product_id,
+          total_amount: item.price * item.quantity,
+          product_quantity: item.quantity,
+          product_price: item.price,
+          payment_status: "Pending" 
+        };
+        const orderRes = await orderService.createOrder(orderPayload);
+        const createdOrderId = orderRes.id || orderRes.order_id;
+        
+        const paymentPayload = {
+          payment_id: 0,
+          order_id: createdOrderId,
+          amount: item.price * item.quantity,
+          status: "Pending" // backend updates this
+        };
+        const paymentRes = await paymentService.createPayment(paymentPayload);
+        return paymentRes.id || paymentRes.payment_id;
+      });
+
+      const paymentIds = await Promise.all(paymentPromises);
+
+      // 3. Poll for status
+      setPaymentStatus("Waiting for payment completion...");
+      let attempts = 0;
+      const pollInterval = setInterval(async () => {
+        attempts++;
+        try {
+          const statusResponses = await Promise.all(paymentIds.map(id => paymentService.getSinglePayment(id)));
+          const allCompleted = statusResponses.every(res => res.status === "Completed");
+          
+          if (allCompleted) {
+            clearInterval(pollInterval);
+            setPaymentStatus("Payment Complete! Order placed successfully.");
+            setIsProcessing(false);
+            if (clearCart) clearCart();
+          } else if (attempts > 10) {
+            clearInterval(pollInterval);
+            setIsProcessing(false);
+            setPaymentStatus("Payment timed out for some items. Please check your orders page.");
+          }
+        } catch (err) {
+          console.error("Polling error", err);
+        }
+      }, 3000);
+
+    } catch (error) {
+      console.error("Checkout failed", error);
+      alert("Checkout failed. Please try again.");
+      setIsProcessing(false);
+      setPaymentStatus(null);
+    }
   };
 
   const handleAddToCart = (product) => {
@@ -153,7 +224,16 @@ const CartPage = () => {
                 tax={tax}
                 total={total}
                 onCheckout={handleCheckout}
+                disabled={isProcessing}
               />
+              {paymentStatus && (
+                <div className="mt-4 p-4 rounded-lg bg-surfaceColor border border-borderColor text-sm text-center">
+                  <p className="text-primaryColor font-medium flex items-center justify-center gap-2">
+                    {isProcessing && <span className="animate-spin h-4 w-4 border-2 border-primaryColor border-t-transparent rounded-full" />}
+                    {paymentStatus}
+                  </p>
+                </div>
+              )}
             </div>
           </div>
         )}

@@ -5,6 +5,7 @@ import { authService } from '../../services/authService';
 
 const LoginPage = () => {
   const [formData, setFormData] = useState({
+    username: '',
     email: '',
     password: ''
   });
@@ -26,7 +27,12 @@ const LoginPage = () => {
     setError('');
 
     try {
-      const response = await authService.login(formData.email, formData.password);
+      const response = await authService.login({
+        username: formData.username,
+        email: formData.email,
+        plain_password: formData.password,
+        role: "buyer"
+      });
       
       if (response.token) {
         authService.setAuthToken(response.token);
@@ -62,6 +68,28 @@ const LoginPage = () => {
               {error}
             </div>
           )}
+
+          <div>
+            <label htmlFor="username" className="block text-textColorMain text-fontSizeSm font-fontWeightMedium mb-marginSmall">
+              Username
+            </label>
+            <div className="relative">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <User size={20} className="text-textColorMuted" />
+              </div>
+              <input
+                id="username"
+                name="username"
+                type="text"
+                autoComplete="username"
+                required
+                value={formData.username}
+                onChange={handleChange}
+                className="appearance-none relative block w-full pl-10 pr-3 py-paddingMedium border border-borderColor bg-surfaceColor text-textColorMain rounded-borderRadiusMd focus:outline-none focus:ring-2 focus:ring-primaryColor focus:border-transparent"
+                placeholder="Enter your username"
+              />
+            </div>
+          </div>
 
           <div>
             <label htmlFor="email" className="block text-textColorMain text-fontSizeSm font-fontWeightMedium mb-marginSmall">
