@@ -1,30 +1,48 @@
+import asyncio
+import json
 from contextlib import asynccontextmanager
-from aiokafka import AIOKafkaProducer
 from datetime import timedelta
+from typing import Annotated, AsyncGenerator, Dict, Optional
+
+from aiokafka import AIOKafkaProducer
 from fastapi import Depends, FastAPI, HTTPException, status
-from typing import AsyncGenerator, Annotated, Optional
-from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
-from .schema import bcrypt_context, authenticate_user
-from .consumer import consume
-from .producer import kafka_producer
-from .database import create_db_and_tables, get_session
-import asyncio, json
-from .model import User, CreateUser, Token, GoogleAuthRequest
-from sqlmodel import Session, select
-from . import setting
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
+from sqlmodel import Session, select
+
+from . import setting
+from .consumer import consume
+from .database import create_db_and_tables, get_session
+from .model import CreateUser, GoogleAuthRequest, Token, User
+from .producer import kafka_producer
+from .schema import authenticate_user, bcrypt_context
 from .utils import create_access_token, decode_access_token
-from .role_checker import require_role
-from google.oauth2 import id_token
-from google.auth.transport import requests as google_requests
 
 
 @asynccontextmanager
 async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
+    """
+    Application lifespan:
+    - Create database tables
+    - Start background Kafka consumer task
+    - On shutdown, cancel the task and await it
+    """
     print("Creating Tables...")
-    task = asyncio.create_task(consume())
+    # Ensure DB tables exist before starting background consumers
     create_db_and_tables()
-    yield
+
+    # Start Kafka consumer in background
+    consumer_task = asyncio.create_task(consume())
+
+    try:
+        yield
+    finally:
+        # Cancel and await consumer task on shutdown
+        consumer_task.cancel()
+        try:
+            await consumer_task
+        except asyncio.CancelledError:
+            print("Kafka consumer task cancelled.")
 
 
 app: FastAPI = FastAPI(lifespan=lifespan, version="1.0.0")
@@ -45,7 +63,7 @@ async def create_user(
     user: CreateUser,
     db: Annotated[Session, Depends(get_session)],
     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
-) -> dict:
+) -> Dict[str, str]:
     if not user.username or not user.plain_password:
         raise HTTPException(
             status_code=400, detail="Please Enter Username or Password...."
@@ -67,6 +85,7 @@ async def create_user(
     db.add(new_user)
     try:
         db.commit()
+        db.refresh(new_user)
     except Exception:
         db.rollback()
         raise HTTPException(status_code=400, detail="User Already Exists...")
@@ -96,13 +115,17 @@ async def login_with_token(
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED, detail="Could Not Validate User"
         )
+
+    # Ensure user.id is an int (fallback to 0 if unexpectedly None)
+    user_id = int(user.id) if user.id is not None else 0
+
     access_token = create_access_token(
         user.username,
-        user.id,
+        user_id,
         user.role,
         timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return Token(access_token=access_token, token_type="bearer")
 
 
 @app.post("/auth/google", response_model=Token)
@@ -113,15 +136,25 @@ async def google_auth(
 ) -> Token:
     """
     Google OAuth login/signup:
-    1. Verify the Google ID token
+    1. Verify the Google ID token (do imports lazily so service can start even if google libs missing)
     2. If user exists → login
     3. If user doesn't exist → auto-create with role='buyer'
     4. Return JWT access token
     """
     try:
-        # Verify the Google ID token
+        # Lazy import so that static analysis or missing libs at import time don't break the app
+        from google.auth.transport import requests as google_requests  # type: ignore
+        from google.oauth2 import id_token as google_id_token  # type: ignore
+    except Exception as e:
+        # Provide a clear runtime error if google auth libs are not available
+        raise HTTPException(
+            status_code=500,
+            detail="Google authentication libraries are not installed on the server.",
+        )
+
+    try:
         print(f"Verifying Google token with client_id: {str(setting.GOOGLE_CLIENT_ID)}")
-        idinfo = id_token.verify_oauth2_token(
+        idinfo = google_id_token.verify_oauth2_token(
             request.id_token,
             google_requests.Request(),
             str(setting.GOOGLE_CLIENT_ID),
@@ -135,7 +168,7 @@ async def google_auth(
     email = idinfo.get("email", "")
     name = idinfo.get("name", email.split("@")[0])
 
-    # Check if user already exists (by google_id or email)
+    # Check if user already exists (prefer google_id then email)
     user = db.exec(select(User).where(User.google_id == google_id)).first()
     if not user:
         user = db.exec(select(User).where(User.email == email)).first()
@@ -181,21 +214,26 @@ async def google_auth(
         )
         print("Google user created and sent to kafka topic...")
 
+    # Ensure user.id is an int (should be present after commit/refresh)
+    user_id = int(user.id) if user.id is not None else 0
+
     # Generate JWT
     access_token = create_access_token(
         user.email,
-        user.id,
+        user_id,
         user.role,
         timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES),
     )
-    return {"access_token": access_token, "token_type": "bearer"}
+    return Token(access_token=access_token, token_type="bearer")
 
 
 @app.get("/get_access_token")
 def get_access_token(email: str, role: str = "buyer", user_id: Optional[int] = None):
     access_token_expire = timedelta(minutes=setting.ACCESS_TOKEN_EXPIRE_MINUTES)
+    # Coerce None to a safe integer (0) because create_access_token expects an int
+    numeric_user_id = int(user_id) if user_id is not None else 0
     access_token = create_access_token(
-        email, user_id, role, expires_delta=access_token_expire
+        email, numeric_user_id, role, expires_delta=access_token_expire
     )
     return {"access_token": access_token}
 
@@ -233,7 +271,8 @@ async def get_user_details(
     db: Annotated[Session, Depends(get_session)],
     token: Annotated[str, Depends(oauth2_scheme)],
 ):
-    user_token_data = decode_access_token(token)
+    # token is required to ensure caller is authenticated; we decode but do not enforce roles here
+    _ = decode_access_token(token)
     user = db.get(User, user_id)
     if not user:
         raise HTTPException(status_code=404, detail="User not found")
