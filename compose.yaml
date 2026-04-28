@@ -3,6 +3,7 @@ services:
   frontend:
     build:
       context: ./frontend
+    command: sh -c "npm install && npm run dev --host"
     ports:
       - "5173:5173"
     volumes:
@@ -143,6 +144,8 @@ services:
       - broker
     ports:
       - "8006:8000"
+    env_file:
+      - .env
     environment:
       - OPENROUTER_API_KEY=${OPENROUTER_API_KEY}
       - PINECONE_API_KEY=${PINECONE_API_KEY}

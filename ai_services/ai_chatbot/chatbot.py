@@ -15,6 +15,7 @@ from dotenv import load_dotenv
 from openai.types.responses import ResponseTextDeltaEvent
 from pinecone import Pinecone
 
+
 load_dotenv()
 
 # gemini_api_key = os.getenv("GEMINI_API_KEY")
@@ -22,12 +23,16 @@ load_dotenv()
 openrouter_api_key = os.getenv("OPENROUTER_API_KEY")
 pinecone_api_key = os.getenv("PINECONE_API_KEY")
 
+print(f"DEBUG: Key length is {len(pinecone_api_key) if pinecone_api_key else 0}")
+print(f"DEBUG: Key starts with: {pinecone_api_key[:8]}...")
+
 # if gemini_api_key:
 #     print("Gemini API Key loaded.")
 if openrouter_api_key:
     print("Openrouter API Key loaded.")
 if pinecone_api_key:
     print("Pinecone API Key loaded.")
+
 
 # Pinecone index for RAG
 INDEX_NAME = "ai-vector-embeddings"

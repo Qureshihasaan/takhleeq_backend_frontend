@@ -78,7 +78,7 @@ async def product_service(
     price: Annotated[float, Form()],
     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
     session: Annotated[Session, Depends(get_session)],
-    token_data: Annotated[dict, Depends(validate_role(["seller", "admin", "buyer"]))],
+    token_data: Annotated[dict, Depends(validate_role(["seller", "admin"]))],
     file: Optional[UploadFile] = File(None),
 ) -> Product:
     """Create a new product with an optional image upload (multipart form)."""
@@ -128,7 +128,7 @@ async def update_product(
     product: Product,
     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
     session: Annotated[Session, Depends(get_session)],
-    token_data: Annotated[dict, Depends(validate_role(["seller", "admin", "buyer"]))],
+    token_data: Annotated[dict, Depends(validate_role(["seller", "admin"]))],
 ):
     db_product = session.get(Product, product_id)
     if not db_product:
@@ -156,7 +156,7 @@ async def delete_product(
     product_id: int,
     session: Annotated[Session, Depends(get_session)],
     producer: Annotated[AIOKafkaProducer, Depends(kafka_producer)],
-    token_data: Annotated[dict, Depends(validate_role(["seller", "admin", "buyer"]))],
+    token_data: Annotated[dict, Depends(validate_role(["seller", "admin"]))],
 ):
     db_product = session.get(Product, product_id)
     if not db_product:

@@ -11,7 +11,7 @@ import json , asyncio, httpx
 # from fastapi.security import OAuth2PasswordRequestForm
 from . import setting
 from fastapi import FastAPI , HTTPException , Depends ,status
-from .authenticate import verify_token
+from .authenticate import verify_token, oauth2_scheme, validate_role
 # from .utils import authenticate_user , Token
 from datetime import timedelta
 from fastapi.security import OAuth2PasswordRequestForm , OAuth2PasswordBearer
@@ -51,8 +51,8 @@ app.add_middleware(
 @app.post("/create_order" , response_model=OrderResponse)
 async def create_order(order : Order , producer : Annotated[AIOKafkaProducer, Depends(kafka_producer)],
                        session : Annotated[Session, Depends(get_db)],
-                        # verify_token : Annotated[User, Depends(verify_access_token)]
-                        token_data : dict = Depends(verify_token),
+                        token_data : dict = Depends(validate_role(["buyer"])),
+                        token: str = Depends(oauth2_scheme),
                        ):
     user_id = token_data.get("id")
     order.user_id = user_id
@@ -66,7 +66,8 @@ async def create_order(order : Order , producer : Annotated[AIOKafkaProducer, De
     # Check Inventory
     async with httpx.AsyncClient() as client:
         try:
-            response = await client.get(f"http://inventory_services:8000/check_inventory/{order.product_id}/{order.product_quantity}")
+            headers = {"Authorization": f"Bearer {token}"}
+            response = await client.get(f"http://inventory_services:8000/check_inventory/{order.product_id}/{order.product_quantity}", headers=headers)
             response.raise_for_status()
             data = response.json()
             if not data.get("available"):

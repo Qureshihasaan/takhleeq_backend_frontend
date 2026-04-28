@@ -46,7 +46,7 @@ def get_db():
 def get_single_stock_update(
     product_id: int,
     db: Annotated[Session, Depends(get_db)],
-    token_data: Annotated[dict, Depends(validate_role(["seller", "admin"]))],
+    token_data: Annotated[dict, Depends(validate_role(["seller", "admin", "buyer"]))],
 ):
     stock = db.exec(
         select(Stock_update).where(Stock_update.product_id == product_id)
@@ -61,7 +61,7 @@ def get_single_stock_update(
 @app.get("/get_stock_update")
 def get_stock_update(
     db: Annotated[Session, Depends(get_db)],
-    token_data: Annotated[dict, Depends(validate_role(["seller", "admin"]))],
+    token_data: Annotated[dict, Depends(validate_role(["seller", "admin", "buyer"]))],
 ):
     stock = db.exec(select(Stock_update)).all()
     return stock
@@ -86,7 +86,11 @@ def delete_stock(
 
 
 @app.get("/check_inventory/{product_id}/{quantity}")
-async def check_inventory(product_id: int, quantity: int):
+async def check_inventory(
+    product_id: int,
+    quantity: int,
+    token_data: Annotated[dict, Depends(validate_role(["seller", "admin", "buyer"]))],
+):
     with Session(engine) as session:
         product = session.exec(
             select(Stock_update).where(Stock_update.product_id == product_id)

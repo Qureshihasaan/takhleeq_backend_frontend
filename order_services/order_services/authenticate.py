@@ -29,3 +29,14 @@ def verify_token(token: str = Depends(oauth2_scheme)):
             detail="Could not validate credentials",
             headers={"WWW-Authenticate": "Bearer"},
         )
+
+def validate_role(required_roles: list[str]):
+    def role_checker(token_data: dict = Depends(verify_token)):
+        user_role = token_data.get("role")
+        if user_role not in required_roles:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{user_role}' is not authorized to perform this action"
+            )
+        return token_data
+    return role_checker

@@ -137,12 +137,10 @@ def delete_inventory(product_id):
 
 
 async def consume_order_events():
-    # Build Kafka configuration with SSL/SASL support for Aiven
-
     consumer = AIOKafkaConsumer(
         setting.KAFKA_ORDER_TOPIC,
-        setting.KAFKA_BOOTSTRAP_SERVER,
-        setting.KAFKA_CONSUMER_GROUP_ID_FOR_INVENTORY,
+        bootstrap_servers=str(setting.KAFKA_BOOTSTRAP_SERVER),
+        group_id=setting.KAFKA_CONSUMER_GROUP_ID_FOR_INVENTORY,
         auto_offset_reset="earliest",
     )
 
@@ -255,96 +253,3 @@ def delete_inventory(product_id):
                 print(f"Product {product_id} not found in inventory, cannot delete.")
     except Exception as e:
         logging.error(f"Error deleting inventory: {e}")
-
-
-##### Notice the below code
-# data = msg.value
-# if data["event_type"] == "product_created":
-#     product_id = data["product_id"]
-#     stock = data["stock"]
-#     with Session(engine) as session:
-#         inventory_item = session.query(Stock_update).filter(Stock_update.product_id == product_id).first()
-#         if inventory_item:
-#             inventory = Stock_update(product_id=product_id, product_quantity=stock)
-#         else:
-#             inventory_item = Stock_update(
-#                 product_id=data["product_id"],
-#                 product_name=data["product_name"],
-#                 product_quantity=data.get("product_quantity", 0),
-#                 status=data.get("status", " In-stock")
-#             )
-
-#             session.add(inventory_item)
-#             print("Product Added to Inventory...")
-#             session.commit()
-# elif data["event_type"] == "product_updated":
-#     product_id = data["product_id"]
-#     stock = data["stock"]
-#     with Session(engine) as session:
-#         inventory_item = session.query(Stock_update).filter(Stock_update.product_id == product_id).first()
-#         if inventory_item:
-#             inventory_item.product_quantity = stock
-#             session.commit()
-# elif data["event_type"] == "product_deleted":
-#     product_id = data["product_id"]
-#     with Session(engine) as session:
-#         inventory_item = session.query(Stock_update).filter(Stock_update.product_id == product_id).first()
-#         if inventory_item:
-#             session.delete(inventory_item)
-#             session.commit()
-
-# while True:
-#     try:
-#         await consumer.start()
-#         logging.info("Consumer started...")
-#         async for msgs in consumer:
-#             data = json.loads(msgs.value.decode("utf-8"))
-#             if data["event_type"] == "product_created":
-#                 product_id = data["product_id"]
-#                 stock = data["stock"]
-#                 with Session(engine) as session:
-#                     inventory_item = session.query(Stock_update).filter(Stock_update.product_id == product_id).first()
-#                     if inventory_item:
-#                         inventory = Stock_update(product_id=product_id, product_quantity=stock)
-#                     else:
-#                         inventory_item = Stock_update(
-#                             product_id=data["product_id"],
-#                             product_name=data["product_name"],
-#                             product_quantity=data.get("product_quantity", 0),
-#                             status=data.get("status", " In-stock")
-#                         )
-
-#                         session.add(inventory_item)
-#                         print("Product Added to Inventory...")
-#                         session.commit()
-# logging.info(f"Consumer_messages...{data} ")
-# product_id = data.get("product_id")
-# if product_id is None:
-#     logging.info("Invalid data received, skipping...", data)
-#     continue
-# with Session(engine) as session:
-#     inventory_item = session.query(Stock_update).filter(Stock_update.product_id == product_id).first()
-#     if inventory_item:
-#         inventory = Stock_update(product_id=product_id, product_name=prod)
-#     #     inventory_item.product_name = data.get("product_name", inventory_item.product_name)
-#     #     inventory_item.product_quantity = data.get("product_quantity", inventory_item.product_quantity)
-#     #     inventory_item.status = data.get("status", inventory_item.status)
-
-#     # else:
-#     #     inventory_item = Stock_update(
-#     #         product_id=data["product_id"],
-#     #         product_name=data["product_name"],
-#     #         product_quantity=data.get("product_quantity", 0),
-#     #         status=data.get("status" , " In-stock")
-#     #     )
-
-#         session.add(inventory_item)
-
-#     session.commit()
-
-# except KafkaConnectionError as e :
-#     logging.info("Consumer starting failed, Retry in 5 sec...")
-#     await asyncio.sleep(5)
-
-# finally:
-#     await consumer.stop()
