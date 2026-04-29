@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Eye, EyeOff, Mail, Lock, User } from 'lucide-react';
 import { authService } from '../../services/authService';
@@ -34,8 +34,8 @@ const LoginPage = () => {
         role: "buyer"
       });
       
-      if (response.token) {
-        authService.setAuthToken(response.token);
+      if (response.access_token) {
+        authService.setAuthToken(response.access_token);
         navigate('/');
       } else {
         setError('Login failed. Please try again.');

@@ -53,9 +53,9 @@ const SignupPage = () => {
         role: "buyer"
       });
       
-      if (response.token) {
-        authService.setAuthToken(response.token);
-        navigate('/');
+      if (response.message) {
+        // Registration successful, navigate to login page
+        navigate('/login');
       } else {
         setError('Registration failed. Please try again.');
       }

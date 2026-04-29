@@ -6,14 +6,15 @@ export const authService = {
    */
   login: async (userData) => {
     try {
-      const payload = {
-        username: userData.username || "",
-        email: userData.email || "",
-        plain_password: userData.plain_password || "",
-        role: userData.role || "buyer"
-      };
+      const formData = new URLSearchParams();
+      formData.append("username", userData.username || "");
+      formData.append("password", userData.plain_password || "");
 
-      const response = await usersApi.post("/login", payload);
+      const response = await usersApi.post("/login", formData, {
+        headers: {
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
+      });
       return response.data;
     } catch (error) {
       console.error("Login failed:", error);
@@ -33,7 +34,7 @@ export const authService = {
         role: userData.role || "buyer"
       };
       
-      const response = await usersApi.post("/signup", payload);
+      const response = await usersApi.post("/Signup", payload);
       return response.data;
     } catch (error) {
       console.error("Registration failed:", error);
